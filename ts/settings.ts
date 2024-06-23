@@ -39,6 +39,11 @@ class Settings {
     countTimeOnLostFocus: boolean | null = null;
     showCurrentTimeFirefox: boolean | null = null;
     showCurrentTimeWebsite: boolean | null = null;
+    breakEndButton: boolean | null = null;
+    /**
+     * In Seconds
+     */
+    breakEndDelay: number | null = null;
     /**
      * In Minutes
      */
@@ -67,6 +72,8 @@ class Settings {
         this.countTimeOnLostFocus = this.countTimeOnLostFocus ?? false;
         this.showCurrentTimeFirefox = this.showCurrentTimeFirefox ?? true;
         this.showCurrentTimeWebsite = this.showCurrentTimeWebsite ?? true;
+        this.breakEndButton = this.breakEndButton ?? true;
+        this.breakEndDelay = this.breakEndDelay ?? 0;
         this.firefoxTimeLimit = this.firefoxTimeLimit ?? -1;
         this.firefoxBreakTime = this.firefoxBreakTime ?? -1;
         this.websiteTimeLimit = this.websiteTimeLimit ?? new Map();
@@ -83,6 +90,8 @@ class Settings {
             "countTimeOnLostFocus",
             "showCurrentTimeFirefox",
             "showCurrentTimeWebsite",
+            "breakEndButton",
+            "breakEndDelay",
             "firefoxTimeLimit",
             "websiteTimeLimit",
             "firefoxBreakTime",
@@ -98,6 +107,8 @@ class Settings {
         this.countTimeOnLostFocus = saved["countTimeOnLostFocus"];
         this.showCurrentTimeFirefox = saved["showCurrentTimeFirefox"];
         this.showCurrentTimeWebsite = saved["showCurrentTimeWebsite"];
+        this.breakEndButton = saved["breakEndButton"];
+        this.breakEndDelay = saved["breakEndDelay"];
         this.firefoxTimeLimit = saved["firefoxTimeLimit"];
         this.firefoxBreakTime = saved["firefoxBreakTime"];
         if (saved["websiteTimeLimit"] != null) {
@@ -120,6 +131,8 @@ class Settings {
             "countTimeOnLostFocus": this.countTimeOnLostFocus,
             "showCurrentTimeFirefox": this.showCurrentTimeFirefox,
             "showCurrentTimeWebsite": this.showCurrentTimeWebsite,
+            "breakEndButton": this.breakEndButton,
+            "breakEndDelay": this.breakEndDelay,
             "firefoxTimeLimit": this.firefoxTimeLimit,
             "firefoxBreakTime": this.firefoxBreakTime,
             "websiteTimeLimit": websiteTimeLimit,

@@ -69,6 +69,9 @@ var darkModeCheckBox: HTMLInputElement | null = null;
 var fixTransparencyCheckBox: HTMLInputElement | null = null;
 var showFirefoxTimeCheckBox: HTMLInputElement | null = null;
 var showPageTimeCheckBox: HTMLInputElement | null = null;
+var breakEndEarlyCheckBox: HTMLInputElement | null = null;
+var breakEndDelayInput: HTMLInputElement | null = null;
+var breakEndDelayInputContainer: HTMLDivElement | null = null;
 var transparencySlider: HTMLInputElement | null = null;
 var backgroundTransparencySlider: HTMLInputElement | null = null;
 var timeUpdateIntervalInput: HTMLInputElement | null = null;
@@ -89,6 +92,9 @@ var breakType: BreakType = BreakType.None;
 var breakExitTimeout: number | null = null;
 var breakTypeSpan: HTMLSpanElement | null = null;
 var breakPanelTimeLeft: HTMLSpanElement | null = null;
+var breakEndEarlyButton: HTMLButtonElement | null = null;
+var breakEndEarlyInterval: number | null = null;
+var breakEndEarlyEnd = 0;
 
 function updatePanelHeight() {
     if (panel != null) {
@@ -171,12 +177,37 @@ function enterBreak(breakTimeLeft: number) {
             }
 
             //Stop Break Button
-            let stopBreakButton = <HTMLButtonElement>innerDocument.getElementById("stop-break-button")!;
-            stopBreakButton.onclick = () => {
-                let message = new MessageForBackground();
-                message.stopBreak = true;
+            breakEndEarlyButton = <HTMLButtonElement>innerDocument.getElementById("stop-break-button")!;
+            //Stop Button From Resizing
+            breakEndEarlyButton.style.width = breakEndEarlyButton.offsetWidth + "px";
+            breakEndEarlyButton.onclick = () => {
+                if (breakEndEarlyInterval != null) {
+                    clearInterval(breakEndEarlyInterval);
+                    breakEndEarlyInterval = null;
+                    breakEndEarlyButton!.innerText = "Click This To Stop The Break";
+                } else if (page_settings!.breakEndDelay! > 0) {
+                    breakEndEarlyEnd = nowUtcMillis() + page_settings!.breakEndDelay! * 1000;
+                    breakEndEarlyInterval = setInterval(() => {
+                        let timeLeft = breakEndEarlyEnd - nowUtcMillis();
+                        if (timeLeft > 0) {
+                            breakEndEarlyButton!.innerText = `${Math.floor(timeLeft / 100) / 10}`;
+                        } else {
+                            let message = new MessageForBackground();
+                            message.stopBreak = true;
 
-                browser.runtime.sendMessage(message);
+                            browser.runtime.sendMessage(message);
+
+                            clearInterval(breakEndEarlyInterval!);
+                            breakEndEarlyInterval = null;
+                            breakEndEarlyButton!.innerText = "0";
+                        }
+                    }, 100)
+                } else {
+                    let message = new MessageForBackground();
+                    message.stopBreak = true;
+
+                    browser.runtime.sendMessage(message);
+                }
             }
 
             breakPanel?.style.setProperty("opacity", "1", "important");
@@ -209,11 +240,17 @@ function exitBreak() {
         }
         breakExitTimeout = setTimeout(() => {
             if (breakPanel != null) {
+                if (breakEndEarlyInterval != null) {
+                    clearInterval(breakEndEarlyInterval);
+                    breakEndEarlyInterval = null;
+                }
                 breakPanel.remove();
                 colorSchemeMeta2 = null;
                 breakTypeSpan = null;
                 breakPanelTimeLeft = null
                 breakPanel = null;
+                breakEndEarlyButton = null;
+
             }
             breakExitTimeout = null;
         }, timeoutLen);
@@ -437,6 +474,21 @@ function createPageRuleRow(saved: boolean, regex: boolean = false, page_name: st
     updatePanelHeight();
 }
 
+function updateBreakEndEarly() {
+    if (breakEndEarlyButton != null) {
+        if (page_settings!.breakEndButton) {
+            breakEndEarlyButton.style.display = "";
+        } else {
+            breakEndEarlyButton.style.display = "none";
+        }
+    }
+    if (page_settings!.breakEndButton) {
+        breakEndDelayInputContainer!.style.display = "";
+    } else {
+        breakEndDelayInputContainer!.style.display = "none";
+    }
+}
+
 function applySettings() {
     if (panel != null && page_settings != null) {
         //Animations
@@ -492,6 +544,11 @@ function applySettings() {
         for (const [key, value] of page_settings.websiteTimeLimit!) {
             createPageRuleRow(true, value.regex, key, value.limitTime, value.breakTime);
         }
+        //Break End Button
+        breakEndEarlyCheckBox!.checked = page_settings.breakEndButton!;
+        updateBreakEndEarly();
+        //Break End Delay
+        breakEndDelayInput!.value = page_settings.breakEndDelay!.toString();
 
         saveNotNeeded();
     }
@@ -758,6 +815,29 @@ function createContent() {
         } else {
             currentTimeOnPageRow!.style.display = "none";
         }
+    }
+
+    //Break End Early Checkbox
+    breakEndEarlyCheckBox = <HTMLInputElement>panelDocument.getElementById("break-end-checkbox")!;
+    breakEndEarlyCheckBox.onchange = () => {
+        saveNeeded();
+        page_settings!.breakEndButton = breakEndEarlyCheckBox?.checked ?? false;
+        updateBreakEndEarly();
+    }
+
+    //Break End Delay Input
+    breakEndDelayInputContainer = <HTMLDivElement>panelDocument.getElementById("break-end-delay-container")!;
+    breakEndDelayInput = <HTMLInputElement>panelDocument.getElementById("break-end-delay")!;
+    breakEndDelayInput.onchange = () => {
+        saveNeeded();
+        //Removing non numeric characters with regex clears entire string for some reason
+        let parsed = parseFloat(resetTimeCountAfterInput!.value);
+
+        if (isNaN(parsed) || !isFinite(parsed)) {
+            parsed = 0;
+            resetTimeCountAfterInput!.value = "0";
+        }
+        page_settings!.breakEndDelay = parsed;
     }
 
     //Reset Time Count After Input
@@ -1086,6 +1166,7 @@ function messageListener(m: any, sender: browser.runtime.MessageSender, sendResp
     }
     if (message.pageData != null) {
         pageData = message.pageData
+        //Added in version 1.1
         if (pageData.minimized == null) {
             pageData.minimized = false;
         }
