@@ -107,11 +107,11 @@ function updatePanelHeight() {
                 panelContainer!.style.height = rect.height + "px";
             }
             panelContainer!.classList.add("com-limitlost-limiter-transition");
-            extendedDivParent!.style.setProperty("height", (advancedRect.top - (extendedRect.top) + advancedRect.height) + "px", "important");
+            extendedDivParent!.style.setProperty("height", (advancedRect.top - (extendedRect.top) + advancedRect.height + extendedDivParent!.scrollTop) + "px", "important");
             if (pageData!.minimized) {
-                oldSizeHeight = (advancedRect.top + advancedRect.height) + "px";
+                oldSizeHeight = (advancedRect.top + advancedRect.height + extendedDivParent!.scrollTop) + "px";
             } else {
-                panelContainer!.style.setProperty("height", (advancedRect.top + advancedRect.height) + "px", "important");
+                panelContainer!.style.setProperty("height", (advancedRect.top + advancedRect.height + extendedDivParent!.scrollTop) + "px", "important");
             }
         } else {
             if (pageData!.minimized) {
@@ -550,6 +550,7 @@ function applySettings() {
         //Break End Delay
         breakEndDelayInput!.value = page_settings.breakEndDelay!.toString();
 
+        updatePanelHeight();
         saveNotNeeded();
     }
 }
