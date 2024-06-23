@@ -126,6 +126,39 @@ async function background() {
         }
         return true;
     }
+    /**
+     * Returns version of the URL saved in the database
+     */
+    function findUrl(baseUrl: string) {
+        let hostname = new URL(baseUrl).hostname;
+
+        for (const iterator of settings.websiteTimeLimit!) {
+            let key = iterator[0]
+            let value = iterator[1]
+            if (value.regex) {
+                let regex = new RegExp(key);
+                if (regex.test(baseUrl)) {
+                    return key;
+                }
+            } else {
+                if (hostname.endsWith(key)) {
+                    return key;
+                }
+            }
+        }
+
+        for (const iterator of totalWebsiteUseTime) {
+            let key = iterator[0]
+            let value = iterator[1]
+            if (!value.regex_key) {
+                if (hostname.endsWith(key)) {
+                    return key
+                }
+            }
+        }
+        //database url should be found at this point, but return just in case somehow it wasn't saved yet
+        return hostname;
+    }
 
     async function initializePage(tabId: number, hostname: string, url: string) {
         let found = null
@@ -544,16 +577,17 @@ async function background() {
                 saveTimeData();
             }
             //Website Update
-            if (currentUsed != null) {
-                let pageData = totalWebsiteUseTime.get(currentUsed);
-                if (pageData != null && pageData.breakTimeLeft != null) {
-                    pageData.breakTimeLeft = null;
-                    pageData.timeCounted = 0;
+            let databaseUrl = findUrl(message.pageUrl);
+            let pageData = totalWebsiteUseTime.get(databaseUrl);
+            if (pageData != null && pageData.breakTimeLeft != null) {
+                pageData.breakTimeLeft = null;
+                pageData.timeCounted = 0;
+                if (currentUsed == databaseUrl) {
                     let message = new MessageFromBackground()
                     message.break = BreakType.None;
                     browser.tabs.sendMessage(currentPage!, message)
-                    saveTimeData();
                 }
+                saveTimeData();
             }
         }
 
