@@ -209,6 +209,7 @@ function enterBreak(breakTimeLeft: number) {
                     browser.runtime.sendMessage(message);
                 }
             }
+            updateBreakEndEarly();
 
             breakPanel?.style.setProperty("opacity", "1", "important");
         }
