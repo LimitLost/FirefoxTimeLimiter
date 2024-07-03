@@ -483,10 +483,12 @@ function updateBreakEndEarly() {
             breakEndEarlyButton.style.display = "none";
         }
     }
-    if (page_settings!.breakEndButton) {
-        breakEndDelayInputContainer!.style.display = "";
-    } else {
-        breakEndDelayInputContainer!.style.display = "none";
+    if (breakEndDelayInputContainer != null) {
+        if (page_settings!.breakEndButton) {
+            breakEndDelayInputContainer!.style.display = "";
+        } else {
+            breakEndDelayInputContainer!.style.display = "none";
+        }
     }
 }
 
