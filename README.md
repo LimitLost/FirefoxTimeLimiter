@@ -1,5 +1,7 @@
 # Time Limiter for Firefox
 
+[Firefox Add-On Page](https://addons.mozilla.org/pl/firefox/addon/time-limiter/)
+
 Extension for Firefox Web Browser. Monitor And Limit the time you spend on websites and in total. Allows for custom break time.
 
 ## Screenshots
@@ -15,7 +17,7 @@ Extension for Firefox Web Browser. Monitor And Limit the time you spend on websi
   - Resizeable
   - Moveable
   - Can be minimized by clicking the clock icon (Click it again to unminimize)
-  - Time Left Until Break is Automatically shown when firefox or current page is limited
+  - Time Left Until Break is Automatically shown when Firefox or current page is limited
 - Break Panel
   - Does not replace current website
   - Allows to end the break early
@@ -36,6 +38,8 @@ Extension for Firefox Web Browser. Monitor And Limit the time you spend on websi
   - Show/Hide Current Website Usage Time
   - Count time while Firefox is unfocused
   - Enable/Disable Animations
+  - Show/Hide Early Break End Button
+  - Set Early Break End Delay
   - Reset Time Count after selected amount of time while firefox is inactive/unfocused
   - Reset Current Page Time Count Button
   - Reset Firefox Time Count Button
