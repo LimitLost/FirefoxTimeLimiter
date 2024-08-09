@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
     "name": "Time Limiter",
-    "version": "1.2.2",
+    "version": "1.2.3",
     "description": "Monitor And Limit the time you spend on websites and in total. Allows for custom break time. Open Source",
     "icons": {
         "48": "limiter-icon.svg",

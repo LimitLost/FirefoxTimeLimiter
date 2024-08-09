@@ -835,7 +835,7 @@ function createContent() {
     breakEndDelayInput.onchange = () => {
         saveNeeded();
         //Removing non numeric characters with regex clears entire string for some reason
-        let parsed = parseFloat(resetTimeCountAfterInput!.value);
+        let parsed = parseFloat(breakEndDelayInput!.value);
 
         if (isNaN(parsed) || !isFinite(parsed)) {
             parsed = 0;
