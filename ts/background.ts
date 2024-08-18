@@ -292,76 +292,88 @@ async function background() {
 
 
     function timeUpdate() {
-        let now = nowUtcMillis();
-        let diff = now - lastTimeUpdate;
+        if (firefoxActive || settings.countTimeOnLostFocus) {
 
-        //Firefox Break Update
-        if (firefoxBreakTimeLeft != null) {
-            lastTimeUpdate = now;
-            if (firefoxBreakTimeLeft > 0) {
-                firefoxBreakTimeLeft -= diff;
-                if (firefoxBreakTimeLeft <= 0) {
-                    firefoxBreakTimeLeft = null;
-                    totalFirefoxUseTime = 0;
-                }
-            }
-            if (currentUsed != null) {
-                let message = new MessageFromBackground();
-                if (firefoxBreakTimeLeft != null) {
-                    message.break = BreakType.Firefox;
-                    message.breakTimeLeft = firefoxBreakTimeLeft;
-                } else {
-                    message.break = BreakType.None;
-                }
-                browser.tabs.sendMessage(currentPage!, message);
-            }
-            return;
-        }
+            let now = nowUtcMillis();
+            let diff = now - lastTimeUpdate;
 
-        //Website Break Update
-        let currentPageBreak = false;
-        for (const [key, value] of totalWebsiteUseTime) {
-            if (value.breakTimeLeft != null) {
-                if (value.breakTimeLeft > 0) {
-                    value.breakTimeLeft -= diff;
-                    if (value.breakTimeLeft <= 0) {
-                        value.breakTimeLeft = null;
-                        value.timeCounted = 0;
+            //Firefox Break Update
+            if (firefoxBreakTimeLeft != null) {
+                lastTimeUpdate = now;
+                if (firefoxBreakTimeLeft > 0) {
+                    firefoxBreakTimeLeft -= diff;
+                    if (firefoxBreakTimeLeft <= 0) {
+                        firefoxBreakTimeLeft = null;
+                        totalFirefoxUseTime = 0;
                     }
                 }
-                if (currentUsed == key) {
+                if (currentUsed != null) {
                     let message = new MessageFromBackground();
-                    if (value.breakTimeLeft != null) {
-                        message.break = BreakType.Website;
-                        message.breakTimeLeft = value.breakTimeLeft;
+                    if (firefoxBreakTimeLeft != null) {
+                        message.break = BreakType.Firefox;
+                        message.breakTimeLeft = firefoxBreakTimeLeft;
                     } else {
                         message.break = BreakType.None;
                     }
                     browser.tabs.sendMessage(currentPage!, message);
-                    currentPageBreak = true;
+                }
+                return;
+            }
+
+            //Website Break Update
+            let currentPageBreak = false;
+            for (const [key, value] of totalWebsiteUseTime) {
+                if (value.breakTimeLeft != null) {
+                    if (value.breakTimeLeft > 0) {
+                        value.breakTimeLeft -= diff;
+                        if (value.breakTimeLeft <= 0) {
+                            value.breakTimeLeft = null;
+                            value.timeCounted = 0;
+                        }
+                    }
+                    if (currentUsed == key) {
+                        let message = new MessageFromBackground();
+                        if (value.breakTimeLeft != null) {
+                            message.break = BreakType.Website;
+                            message.breakTimeLeft = value.breakTimeLeft;
+                        } else {
+                            message.break = BreakType.None;
+                        }
+                        browser.tabs.sendMessage(currentPage!, message);
+                        currentPageBreak = true;
+                    }
                 }
             }
-        }
-        if (currentPageBreak) {
+
+
+            if (!settings.countTimeOnLostFocus && !firefoxActive) {
+                lastTimeUpdate = now;
+                return;
+            }
+            //Reset Count Check
+            if (diff > settings.resetTimeCountAfter! * 3600 * 1000) {
+                //Reset Firefox Time Data (Only when break is not active)
+                if (firefoxBreakTimeLeft == null) {
+                    totalFirefoxUseTime = 0;
+                }
+                //Reset Page Time Data (Only when break is not active)
+                for (const [, value] of totalWebsiteUseTime) {
+                    if (value.breakTimeLeft == null) {
+                        value.timeCounted = 0;
+                    }
+                }
+                lastTimeUpdate = now;
+                return;
+            }
+
+            if (currentPageBreak) {
+                lastTimeUpdate = now;
+                return;
+            }
+
             lastTimeUpdate = now;
-            return;
-        }
 
-        if (!settings.countTimeOnLostFocus && !firefoxActive) {
-            lastTimeUpdate = now;
-            return;
-        }
 
-        if (diff > 3 * 60_000) {
-            //Skip potential computer sleep time
-            resetTimeDataCheck(now);
-            lastTimeUpdate = now;
-            return;
-        }
-
-        lastTimeUpdate = now;
-
-        if (firefoxActive || settings.countTimeOnLostFocus) {
             totalFirefoxUseTime += diff;
 
             if (currentUsed != null) {
@@ -390,7 +402,11 @@ async function background() {
                 if (pageLimitData != null) {
                     if (pageLimitData.limitTime > 0) {
                         let timeLimitMillis = pageLimitData.limitTime * 60_000
-                        let websiteUseTime = totalWebsiteUseTime.get(currentUsed)!
+                        let websiteUseTime = totalWebsiteUseTime.get(currentUsed)
+                        if (websiteUseTime == null) {
+                            totalWebsiteUseTime.set(currentUsed, new PageTimeData(true));
+                            websiteUseTime = totalWebsiteUseTime.get(currentUsed)!;
+                        }
                         let timeCounted = websiteUseTime.timeCounted ?? 0
 
                         if (timeCounted > timeLimitMillis) {
@@ -424,10 +440,6 @@ async function background() {
                 message.firefoxTimeUpdate = totalFirefoxUseTime;
                 browser.tabs.sendMessage(currentPage!, message);
             }
-
-
-
-
         }
     }
     var timeUpdateInterval = setInterval(timeUpdate, settings.updateTimerPerMiliseconds!)
