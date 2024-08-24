@@ -350,6 +350,12 @@ async function background() {
                 lastTimeUpdate = now;
                 return;
             }
+            ///Don't count time after computer stopped sleeping
+            if (diff > 10_000) {
+                lastTimeUpdate = now;
+                return
+            }
+
             //Reset Count Check
             if (diff > settings.resetTimeCountAfter! * 3600 * 1000) {
                 //Reset Firefox Time Data (Only when break is not active)
@@ -453,7 +459,75 @@ async function background() {
         if (windowId == browser.windows.WINDOW_ID_NONE) {
             firefoxActive = false;
         } else {
-            resetTimeDataCheck(nowUtcMillis());
+            let now = nowUtcMillis();
+            let diff = now - lastTimeUpdate;
+
+            //Update break times before activating background time update
+
+            //Firefox Break Update
+            if (firefoxBreakTimeLeft != null) {
+                lastTimeUpdate = now;
+                if (firefoxBreakTimeLeft > 0) {
+                    firefoxBreakTimeLeft -= diff;
+                    if (firefoxBreakTimeLeft <= 0) {
+                        firefoxBreakTimeLeft = null;
+                        totalFirefoxUseTime = 0;
+                    }
+                }
+                if (currentUsed != null) {
+                    let message = new MessageFromBackground();
+                    if (firefoxBreakTimeLeft != null) {
+                        message.break = BreakType.Firefox;
+                        message.breakTimeLeft = firefoxBreakTimeLeft;
+                    } else {
+                        message.break = BreakType.None;
+                    }
+                    browser.tabs.sendMessage(currentPage!, message);
+                }
+            }
+
+            //Website Break Update
+            for (const [key, value] of totalWebsiteUseTime) {
+                if (value.breakTimeLeft != null) {
+                    if (value.breakTimeLeft > 0) {
+                        value.breakTimeLeft -= diff;
+                        if (value.breakTimeLeft <= 0) {
+                            value.breakTimeLeft = null;
+                            value.timeCounted = 0;
+                        }
+                    }
+                    if (currentUsed == key) {
+                        let message = new MessageFromBackground();
+                        if (value.breakTimeLeft != null) {
+                            message.break = BreakType.Website;
+                            message.breakTimeLeft = value.breakTimeLeft;
+                        } else {
+                            message.break = BreakType.None;
+                        }
+                        browser.tabs.sendMessage(currentPage!, message);
+                    }
+                }
+            }
+
+            //Reset Count Check
+            if (diff > settings.resetTimeCountAfter! * 3600 * 1000) {
+                //Reset Firefox Time Data (Only when break is not active)
+                if (firefoxBreakTimeLeft == null) {
+                    totalFirefoxUseTime = 0;
+                }
+                //Reset Page Time Data (Only when break is not active)
+                for (const [, value] of totalWebsiteUseTime) {
+                    if (value.breakTimeLeft == null) {
+                        value.timeCounted = 0;
+                    }
+                }
+                lastTimeUpdate = now;
+            }
+
+            resetTimeDataCheck(now);
+
+            lastTimeUpdate = now;
+
             firefoxActive = true;
         }
     })
